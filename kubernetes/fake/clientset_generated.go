@@ -94,8 +94,9 @@ func NewSimpleClientset(objects ...runtime.Object) *Clientset {
 	}
 
 	fakePtr := testing.Fake{}
-	fakePtr.AddReactor("*", "*", testing.ObjectReaction(o))
-	fakePtr.AddWatchReactor("*", testing.DefaultWatchReactor(watch.NewFake(), nil))
+	fakeWatch := watch.NewFake()
+	fakePtr.AddReactor("*", "*", testing.ObjectReaction(o, fakeWatch))
+	fakePtr.AddWatchReactor("*", testing.DefaultWatchReactor(fakeWatch, nil))
 
 	return &Clientset{fakePtr, &fakediscovery.FakeDiscovery{Fake: &fakePtr}}
 }

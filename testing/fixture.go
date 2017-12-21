@@ -64,7 +64,7 @@ type ObjectScheme interface {
 
 // ObjectReaction returns a ReactionFunc that applies core.Action to
 // the given tracker.
-func ObjectReaction(tracker ObjectTracker) ReactionFunc {
+func ObjectReaction(tracker ObjectTracker, watcher *watch.FakeWatcher) ReactionFunc {
 	return func(action Action) (bool, runtime.Object, error) {
 		ns := action.GetNamespace()
 		gvr := action.GetResource()
@@ -100,6 +100,7 @@ func ObjectReaction(tracker ObjectTracker) ReactionFunc {
 				return true, nil, err
 			}
 			obj, err := tracker.Get(gvr, ns, objMeta.GetName())
+			watcher.Add(obj)
 			return true, obj, err
 
 		case UpdateActionImpl:
@@ -112,13 +113,19 @@ func ObjectReaction(tracker ObjectTracker) ReactionFunc {
 				return true, nil, err
 			}
 			obj, err := tracker.Get(gvr, ns, objMeta.GetName())
+			watcher.Modify(obj)
 			return true, obj, err
 
 		case DeleteActionImpl:
-			err := tracker.Delete(gvr, ns, action.GetName())
+			obj, err := tracker.Get(gvr, ns, action.GetName())
 			if err != nil {
 				return true, nil, err
 			}
+			err = tracker.Delete(gvr, ns, action.GetName())
+			if err != nil {
+				return true, nil, err
+			}
+			watcher.Delete(obj)
 			return true, nil, nil
 
 		default:
